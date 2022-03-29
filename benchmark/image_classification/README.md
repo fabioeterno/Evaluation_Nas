@@ -17,12 +17,3 @@ Run the following commands to go through the whole training and validation proce
 # Download training, train model, test the model
 ./cifar10_resnet.sh
 ```
-
-## Description
-The python format CIFAR10 dataset batches are stored in the __/cifar-10-batches-py__ folder.
-
-The performance evaluation test set is made of 200 samples randomly chosen from the CIFAR10.
-These samples are stored in the __/perf_samples__ folder.  
-Associated to the performance samples is the __y_labels.csv__ ground truth file: the first item of each row is the name of the sample, the second item of each row is the total number of classes (10) and the third item is the target class.
-
-Please, use this performance evaluation test set to evaluate performances of the system to be tested.
