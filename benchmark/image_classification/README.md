@@ -15,7 +15,7 @@ Run the following commands to go through the whole training and validation proce
 ``` Bash
 
 # Download training, train model, test the model
-./download_cifar10_train_resnet.sh
+./cifar10_resnet.sh
 ```
 
 ## Description
