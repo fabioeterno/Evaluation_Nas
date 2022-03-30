@@ -18,7 +18,7 @@ torch.manual_seed(17)
 
 # Function to retrieve the CIFAR10 benchmark
 def get_benchmark():
-    # Defining the same preprocessing steps of the TinyML paper
+    # Defining the same preprocessing steps of the TinyML paper for training
     transform = transforms.Compose([
     transforms.RandomRotation(15),
     transforms.RandomAffine(degrees=0, translate=(0.1, 0.1)),
@@ -27,8 +27,13 @@ def get_benchmark():
     #transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     ])
 
+    # Converting to tensor the test images
+    test_to_tensor = transforms.Compose([
+    transforms.ToTensor()
+    ])
+
     train_val_set = torchvision.datasets.CIFAR10(root='./', train=True, download=True, transform=transform)
-    test_set = torchvision.datasets.CIFAR10(root='./',train=False, download=True)
+    test_set = torchvision.datasets.CIFAR10(root='./',train=False, download=True, transform=test_to_tensor)
 
     labels = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
@@ -350,6 +355,7 @@ class CheckPoint():
         self.dir = dir
         self.mode = mode
         self.format = fmt
+        self.chkname = fmt
         self.net = net
         self.optimizer = optimizer
         self.val = None
@@ -385,12 +391,23 @@ class CheckPoint():
         }, path)
 
     def load_best(self):
+        for filename in os.listdir(self.dir):
+          f = os.path.join(self.dir, filename)
+          accuracy = 0
+          if os.path.isfile(f):           
+            chkpt = torch.load(f)
+            chkname = "ck_{:03d}.pt".format(chkpt['epoch'])
+            #print("ck_{:03d}.pt".format(chkpt['epoch']))
+            if chkpt['val'] > accuracy:
+              self.best_path = os.path.join(self.dir, chkname)
+        #print("best path", self.best_path)  
         if self.best_path is None:
-            raise FileNotFoundError("Best path not set!")
+          raise FileNotFoundError("Checkpoint folder is empty")    
         self.load(self.best_path)
 
     def load(self, path):
         checkpoint = torch.load(path)
+        #print(path, checkpoint.keys(), checkpoint['epoch'])
         self.net.load_state_dict(checkpoint['model_state_dict'])
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 

@@ -14,7 +14,7 @@ config = {
   # training
   "es_patience": 5,
   "lr_patience": 2,
-  "n_epochs": 100,
+  "n_epochs": 500,
   "lr_factor": 0.1,
   "lr": 0.001,
 }
@@ -41,11 +41,11 @@ optimizer = optim.Adam(net.parameters(), lr=config['lr'])
 early_stop = EarlyStopping(config['es_patience'], 'max')
 checkpoint = CheckPoint('./checkpoints', net, optimizer, 'max')
 
-for epoch in range(config['n_epochs']):
-  metrics = train_one_epoch(epoch, net, criterion, optimizer,
-                            trainLoader, valLoader, device)
+#for epoch in range(config['n_epochs']):
+#  metrics = train_one_epoch(epoch, net, criterion, optimizer,
+#                            trainLoader, valLoader, device)
 
-  checkpoint(epoch, metrics['val_acc'])
+#  checkpoint(epoch, metrics['val_acc'])
 
 checkpoint.load_best()
 checkpoint.save('final_best.ckp')
