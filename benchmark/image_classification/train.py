@@ -25,11 +25,6 @@ train_val_set, test_set, labels = get_benchmark()
 # Define training, validation and test dataloader
 trainLoader, valLoader, testLoader = get_dataloaders(config, train_val_set, test_set)
 
-#for image, target in trainLoader:
-#  print(image, image.size(), type(image), image.dtype)
-#  print(target, target.size())
-#  sys.exit(1)
-
 # Define the model
 net = ResnetV1Eembc()
 if torch.cuda.is_available():
@@ -38,15 +33,16 @@ if torch.cuda.is_available():
 # Define the optimizer, the loss and the number of epochs
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(net.parameters(), lr=config['lr'])
-early_stop = EarlyStopping(config['es_patience'], 'max')
-checkpoint = CheckPoint('./checkpoints', net, optimizer, 'max')
+checkpoint = CheckPoint('./checkpoints2', net, optimizer, 'max')
 
-#for epoch in range(config['n_epochs']):
-#  metrics = train_one_epoch(epoch, net, criterion, optimizer,
-#                            trainLoader, valLoader, device)
+# Training loop
+for epoch in range(config['n_epochs']):
+  metrics = train_one_epoch(epoch, net, criterion, optimizer,
+                            trainLoader, valLoader, device)
 
-#  checkpoint(epoch, metrics['val_acc'])
+  checkpoint(epoch, metrics['val_acc'])
 
+# Retrieve best checkpoint and test the model
 checkpoint.load_best()
 checkpoint.save('final_best.ckp')
 test_loss, test_acc = evaluate(net, criterion, testLoader, device)

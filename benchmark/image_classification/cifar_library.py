@@ -1,5 +1,4 @@
 import os
-import json
 import torch
 import torchvision
 import torchvision.transforms as transforms
@@ -8,11 +7,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torchsummary import summary
 from tqdm import tqdm
-import numpy as np
-import pickle
-import sys
-import pandas as pd
-import matplotlib.pyplot as plt
+
 
 torch.manual_seed(17)
 
@@ -24,7 +19,6 @@ def get_benchmark():
     transforms.RandomAffine(degrees=0, translate=(0.1, 0.1)),
     transforms.RandomHorizontalFlip(0.5),
     transforms.ToTensor(),
-    #transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     ])
 
     # Converting to tensor the test images
@@ -39,124 +33,13 @@ def get_benchmark():
 
     return train_val_set, test_set, labels
 
-# Loading the cifar10 dataset with the same method of TinyML paper
-def unpickle(file):
-    """load the cifar-10 data"""
-
-    with open(file, 'rb') as fo:
-        data = pickle.load(fo, encoding='bytes')
-    return data
-
-
-def load_cifar_10_data(data_dir, negatives=False):
-    """
-    Return train_data, train_filenames, train_labels, test_data, test_filenames, test_labels
-    """
-    meta_data_dict = unpickle(data_dir + "/batches.meta")
-    cifar_label_names = meta_data_dict[b'label_names']
-    cifar_label_names = np.array(cifar_label_names)
-
-    # training data
-    cifar_train_data = None
-    cifar_train_filenames = []
-    cifar_train_labels = []
-
-    for i in range(1, 6):
-        cifar_train_data_dict = unpickle(data_dir + "/data_batch_{}".format(i))
-        if i == 1:
-            cifar_train_data = cifar_train_data_dict[b'data']
-        else:
-            cifar_train_data = np.vstack((cifar_train_data, cifar_train_data_dict[b'data']))
-        cifar_train_filenames += cifar_train_data_dict[b'filenames']
-        cifar_train_labels += cifar_train_data_dict[b'labels']
-
-    cifar_train_data = cifar_train_data.reshape((len(cifar_train_data), 3, 32, 32))
-
-    # reshape from [50000, 3, 32, 32] to [50000, 32, 32, 3]
-    cifar_train_data = np.rollaxis(cifar_train_data, 1, 4)
-
-    cifar_train_filenames = np.array(cifar_train_filenames)
-    cifar_train_labels = np.array(cifar_train_labels)
-
-    cifar_test_data_dict = unpickle(data_dir + "/test_batch")
-    cifar_test_data = cifar_test_data_dict[b'data']
-    cifar_test_filenames = cifar_test_data_dict[b'filenames']
-    cifar_test_labels = cifar_test_data_dict[b'labels']
-
-    cifar_test_data = cifar_test_data.reshape((len(cifar_test_data), 3, 32, 32))
-    cifar_test_data = np.rollaxis(cifar_test_data, 1, 4)
-
-    cifar_test_filenames = np.array(cifar_test_filenames)
-    cifar_test_labels = np.array(cifar_test_labels)
-
-    return cifar_train_data, cifar_train_filenames, cifar_train_labels, \
-        cifar_test_data, cifar_test_filenames, cifar_test_labels, cifar_label_names
-
-class GetDataset(torch.utils.data.Dataset):
-    def __init__(self, image_list, label_list):
-        super().__init__()
-        self.image_list = image_list
-        self.label_list = label_list
-
-    def __len__(self):
-        return len(self.image_list)
-
-    def __getitem__(self, index):
-        img = self.image_list[index]
-        label = self.label_list[index]
-
-        return img, label
 
 # Function to retrieve the training, validation and test dataloaders
 def get_dataloaders(config, train_val_set, test_set):
 
-    cifar_10_dir = 'cifar-10-batches-py'
-
-    # (50000, 32, 32, 3) and (10000, 32, 32, 3)
-    train_data, train_filenames, train_labels, test_data, test_filenames, test_labels, label_names = \
-        load_cifar_10_data(cifar_10_dir)
-
-
-    np.random.seed(17)
-    ix_size = int(0.20 * len(train_data))
-    ix = np.random.choice(len(train_data), size=ix_size, replace=False)
-
-    # create a mask for the training and validation indexes
-    mask = np.ones(len(train_data))
-    mask[ix] = 0
-
-    train_mask = np.where(mask==1)
-    val_mask = np.where(mask==0)
-
-
-
-    val_data = train_data[val_mask]
-    val_data = np.transpose(val_data, (0,3,1,2))
-    val_labels = train_labels[val_mask]
-
-    train_data = train_data[train_mask]
-    train_data = np.transpose(train_data, (0,3,1,2))
-    train_labels = train_labels[train_mask]
-
-
-    #print(np.shape(val_data))
-    #print(np.shape(train_data))
-
-    #print(np.shape(train_labels[train_mask]))
-    #print(np.shape(train_labels[val_mask]))
-    #y = np.bincount(train_labels[train_mask])
-    #print(y)
-    #y = np.bincount(train_labels[val_mask])
-    #print(y)
-
-    train_set = GetDataset(torch.from_numpy(train_data).to(dtype=torch.float), torch.from_numpy(train_labels))
-    val_set = GetDataset(torch.from_numpy(val_data).to(dtype=torch.float), torch.from_numpy(val_labels))
-
     val_len = int(config['val_split'] * len(train_val_set))
     train_len = len(train_val_set) - val_len
     train_set, val_set = torch.utils.data.random_split(train_val_set, [train_len, val_len])
-
-
 
     train_loader = torch.utils.data.DataLoader(train_set,
                                               batch_size=config['batch_size'],
@@ -215,11 +98,10 @@ class ResnetV1Eembc(torch.nn.Module):
         self.bn3 = nn.BatchNorm2d(64)
         self.conv3x = nn.Conv2d(32, 64, kernel_size=1, stride=2, padding=0)
 
-        #self.gap = torch.nn.AdaptiveAvgPool2d(1)
         self.avgpool = torch.nn.AvgPool2d(8)
 
         self.out = nn.Linear(64, 10)
-        #self.softmax = nn.Softmax()
+
 
     def forward(self, input):
         # Input layer
@@ -247,16 +129,10 @@ class ResnetV1Eembc(torch.nn.Module):
         x = self.conv3x(x)         # [8, 8, 64]
         x = torch.add(x, y)        # [8, 8, 64]
         x = self.relu(x)
-        #print(" ")
-        #print("beginning",x.size())
-        #print("select",x.size())
-        x = self.avgpool(x)            # [1, 1, 64]
-        #print("pooling",x.size())
+
+        x = self.avgpool(x)        # [1, 1, 64]
         x = torch.squeeze(x)       # [64]
-        #print("flatten",y.size())
         x = self.out(x)            # [10]
-        #print("last",x.size())
-        #x = self.softmax(x)  # do not use softmax if you use crossentropyloss
 
         return x
 
@@ -312,41 +188,10 @@ def accuracy(output, target, topk=(1,)):
       res.append(correct_k.mul_(100.0 / batch_size))
   return res
 
-class EarlyStopping():
-  """
-  stop the training when the loss does not improve.
-  """
-  def __init__(self, patience=5, mode='min'):
-    if mode not in ['min', 'max']:
-      raise ValueError("Early-stopping mode not supported")
-    self.patience = patience
-    self.mode = mode
-    self.counter = 0
-    self.best_val = None
-
-  def __call__(self, val):
-    val = float(val)
-    if self.best_val == None:
-      self.best_val = val
-    elif self.mode == 'min' and val < self.best_val:
-      self.best_val = val
-      self.counter = 0
-    elif self.mode == 'max' and val > self.best_val:
-      self.best_val = val
-      self.counter = 0
-    else:
-      self.counter += 1
-      if self.counter >= self.patience:
-        print("Early Stopping!")
-        return True
-    return False
-
-
 class CheckPoint():
     """
     save/load a checkpoint based on a metric
     """
-
     def __init__(self, dir, net, optimizer, mode='min', fmt='ck_{epoch:03d}.pt'):
         if mode not in ['min', 'max']:
             raise ValueError("Early-stopping mode not supported")
@@ -397,22 +242,18 @@ class CheckPoint():
           if os.path.isfile(f):           
             chkpt = torch.load(f)
             chkname = "ck_{:03d}.pt".format(chkpt['epoch'])
-            #print("ck_{:03d}.pt".format(chkpt['epoch']))
             if chkpt['val'] > accuracy:
               self.best_path = os.path.join(self.dir, chkname)
-        #print("best path", self.best_path)  
         if self.best_path is None:
           raise FileNotFoundError("Checkpoint folder is empty")    
         self.load(self.best_path)
 
     def load(self, path):
         checkpoint = torch.load(path)
-        #print(path, checkpoint.keys(), checkpoint['epoch'])
         self.net.load_state_dict(checkpoint['model_state_dict'])
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
 def run_model(model, image, target, criterion, device):
-    #print(model, image, target, criterion, device)
     output = model(image)
     loss = criterion(output, target)
     return output, loss
