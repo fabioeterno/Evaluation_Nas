@@ -12,11 +12,8 @@ config = {
   "num_workers": 2,
   "val_split": 0.2,
   # training
-  "es_patience": 5,
-  "lr_patience": 2,
   "n_epochs": 500,
-  "lr_factor": 0.1,
-  "lr": 0.001,
+  "lr": 0.001
 }
 
 # Import benchmark dataset
@@ -33,13 +30,11 @@ if torch.cuda.is_available():
 # Define the optimizer, the loss and the number of epochs
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.Adam(net.parameters(), lr=config['lr'])
-checkpoint = CheckPoint('./checkpoints2', net, optimizer, 'max')
+checkpoint = CheckPoint('./checkpoints', net, optimizer, 'max')
 
 # Training loop
 for epoch in range(config['n_epochs']):
-  metrics = train_one_epoch(epoch, net, criterion, optimizer,
-                            trainLoader, valLoader, device)
-
+  metrics = train_one_epoch(epoch, net, criterion, optimizer, trainLoader, valLoader, device)
   checkpoint(epoch, metrics['val_acc'])
 
 # Retrieve best checkpoint and test the model

@@ -8,7 +8,6 @@ import torch.optim as optim
 from torchsummary import summary
 from tqdm import tqdm
 
-
 torch.manual_seed(17)
 
 # Function to retrieve the CIFAR10 benchmark
@@ -56,6 +55,7 @@ def get_dataloaders(config, train_val_set, test_set):
 
     return train_loader, val_loader, test_loader
 
+
 # I define a class ConvBlock to simplify the definition of the network later
 class ConvBlock(torch.nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size=3, stride=2,padding=1):
@@ -67,6 +67,7 @@ class ConvBlock(torch.nn.Module):
     def forward(self, input):
         x = self.conv1(input)
         return self.relu(self.bn(x))
+
 
 class ResnetV1Eembc(torch.nn.Module):
     def __init__(self):
@@ -136,6 +137,7 @@ class ResnetV1Eembc(torch.nn.Module):
 
         return x
 
+
 def lr_schedule(optimizer, epoch):
     initial_learning_rate = 0.001
     decay_per_epoch = 0.99
@@ -187,6 +189,7 @@ def accuracy(output, target, topk=(1,)):
       correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
       res.append(correct_k.mul_(100.0 / batch_size))
   return res
+
 
 class CheckPoint():
     """
@@ -253,10 +256,12 @@ class CheckPoint():
         self.net.load_state_dict(checkpoint['model_state_dict'])
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
+
 def run_model(model, image, target, criterion, device):
     output = model(image)
     loss = criterion(output, target)
     return output, loss
+
 
 def evaluate(model, criterion, data_loader, device, neval_batches = None):
   model.eval()
@@ -274,6 +279,7 @@ def evaluate(model, criterion, data_loader, device, neval_batches = None):
       if neval_batches is not None and step >= neval_batches:
         return avgloss, avgacc
   return avgloss, avgacc
+
 
 def train_one_epoch(epoch, model, criterion, optimizer, train, val, device):
   model.train()
