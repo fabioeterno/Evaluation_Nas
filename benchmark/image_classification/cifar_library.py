@@ -12,7 +12,7 @@ torch.manual_seed(17)
 
 # Function to retrieve the CIFAR10 benchmark
 def get_benchmark():
-    # Defining the same preprocessing steps of the TinyML paper for training
+    # Defining the same data augmentation steps of the TinyML paper for training
     transform = transforms.Compose([
     transforms.RandomRotation(15),
     transforms.RandomAffine(degrees=0, translate=(0.1, 0.1)),
