@@ -20,22 +20,18 @@ class Coco(torch.utils.data.Dataset):
         # images with person and train in the filename
         self.train_person_list = glob.glob(image_path[0])
         self.train_person_label = list(np.ones(len(self.train_person_list)))
-        print("images with person and train in the filename")
 
         # images with no person and train in the file name
         self.train_non_person_list = glob.glob(image_path[1])
         self.train_non_person_label = list(np.zeros(len(self.train_non_person_list)))
-        print("images with no person and train in the file name")
 
         # images with person and val in the filename
         self.val_person_list = glob.glob(image_path[2])
         self.val_person_label = list(np.ones(len(self.val_person_list)))
-        print("images with person and val in the filename")
 
         # images with no person and val in the filename
         self.val_non_person_list = glob.glob(image_path[3])
         self.val_non_person_label = list(np.zeros(len(self.val_non_person_list)))
-        print("images with no person and val in the filename")
 
         self.set = self.train_person_list + self.train_non_person_list + \
                    self.val_person_list + self.val_non_person_list
@@ -119,15 +115,15 @@ class ConvBlock(torch.nn.Module):
         x = self.conv1(input)
         return self.relu(self.bn(x))
 
-
+# Definition of MobileNet architecture
 class MobilenetV1(torch.nn.Module):
     def __init__(self):
         super().__init__()
 
         # MobileNet v1 parameters
-        self.input_shape = [3, 96, 96]  # default size for cifar10
-        self.num_classes = 2  # default class number for cifar10
-        self.num_filters = 8  # this should be 64 for an official resnet model
+        self.input_shape = [3, 96, 96]  # default size for coco dataset
+        self.num_classes = 2  # binary classification: person or non person
+        self.num_filters = 8
 
         # MobileNet v1 layers
 
@@ -198,90 +194,63 @@ class MobilenetV1(torch.nn.Module):
         # 1st layer
         x = self.inputblock(input) # [48, 48,  8]
 
-        #print("")
-        #print("Layer 1", x.size(), x.type())
         # 2nd layer
         x = self.depthwise2(x)     # [48, 48,  8]
         x = self.pointwise2(x)     # [48, 48, 16]
-        #print("Layer 2", x.size())
 
         # 3rd layer
         x = self.depthwise3(x)     # [24, 24, 16]
         x = self.pointwise3(x)     # [24, 24, 32]
-        #print("Layer 3", x.size())
 
         # 4th layer
         x = self.depthwise4(x)     # [24, 24, 32]
         x = self.pointwise4(x)     # [24, 24, 32]
-        #print("Layer 4", x.size())
 
         # 5th layer
         x = self.depthwise5(x)     # [12, 12, 32]
         x = self.pointwise5(x)     # [12, 12, 64]
-        #print("Layer 5", x.size())
 
         # 6th layer
         x = self.depthwise6(x)     # [12, 12, 64]
         x = self.pointwise6(x)     # [12, 12, 64]
-        #print("Layer 6", x.size())
 
         # 7th layer
         x = self.depthwise7(x)     # [ 6,  6, 64]
         x = self.pointwise7(x)     # [ 6,  6, 128]
-        #print("Layer 7", x.size())
 
         # 8th layer
         x = self.depthwise8(x)     # [ 6,  6, 128]
         x = self.pointwise8(x)     # [ 6,  6, 128]
-        #print("Layer 8", x.size())
 
         # 9th layer
         x = self.depthwise9(x)     # [ 6,  6, 128]
         x = self.pointwise9(x)     # [ 6,  6, 128]
-        #print("Layer 9", x.size())
 
         # 10th layer
         x = self.depthwise10(x)    # [ 6,  6, 128]
         x = self.pointwise10(x)    # [ 6,  6, 128]
-        #print("Layer 10", x.size())
 
         # 11th layer
         x = self.depthwise11(x)    # [ 6,  6, 128]
         x = self.pointwise11(x)    # [ 6,  6, 128]
-        #print("Layer 11", x.size())
 
         # 12th layer
         x = self.depthwise12(x)    # [ 6,  6, 128]
         x = self.pointwise12(x)    # [ 6,  6, 128]
-        #print("Layer 12", x.size())
 
         # 13th layer
         x = self.depthwise13(x)    # [ 3,  3, 128]
         x = self.pointwise13(x)    # [ 3,  3, 256]
-        #print("Layer 13", x.size())
 
         # 14th layer
         x = self.depthwise14(x)    # [ 3,  3, 256]
         x = self.pointwise14(x)    # [ 3,  3, 256]
-        #print("Layer 14", x.size())
 
         x = self.avgpool(x)        # [ 1,  1, 256]
-        #print("Pool", x.size())
         x = torch.squeeze(x)       # [256]
-        #print("Squeeze", x.size())
         x = self.out(x)            # [2]
-        #print("Out", x.size())
 
         return x
-
-
-#def lr_schedule(optimizer, epoch):
-#    initial_learning_rate = 0.001
-#    decay_per_epoch = 0.99
-#    lrate = initial_learning_rate * (decay_per_epoch ** epoch)
-#    for opt in optimizer.param_groups:
-#        opt['lr'] = lrate
-
 
 class AverageMeter(object):
 
@@ -435,7 +404,6 @@ def train_one_epoch(epoch, model, criterion, optimizer, train, val, device):
       target = target.type(torch.long)
       image, target = image.to(device), target.to(device)
       output, loss = run_model(model, image, target, criterion, device)
-      #lr_schedule(optimizer, epoch)
       optimizer.zero_grad()
       loss.backward()
       optimizer.step()
