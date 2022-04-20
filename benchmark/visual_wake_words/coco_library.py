@@ -49,7 +49,7 @@ class Coco(torch.utils.data.Dataset):
             transforms.RandomRotation(10),
             transforms.RandomAffine(degrees=0, translate=(0.05, 0.05)),
             transforms.RandomHorizontalFlip(),
-            transforms.RandomResizedCrop(size=96, scale=(0.05, 0.95)),
+            transforms.RandomResizedCrop(size=96, scale=(0.9, 1.1)),
             transforms.ToTensor()
         ])
 
