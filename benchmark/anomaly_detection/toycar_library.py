@@ -31,20 +31,12 @@ import torch.optim as optim
 import numpy as np
 import random
 import common as com
+import eval_functions_eembc
+from sklearn import metrics
 
-torch.manual_seed(46)
-
-import logging
-
-logging.basicConfig(level=logging.DEBUG, filename="baseline.log")
-logger = logging.getLogger(' ')
-handler = logging.StreamHandler()
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-logger.addHandler(handler)
+#torch.manual_seed(46)
 
 ########################################################################
-
 
 def list_to_vector_array(file_list,
                          msg="calc...",
@@ -124,12 +116,9 @@ class ToyCar(torch.utils.data.Dataset):
                                    hop_length=config["hop_length"],
                                    power=config["power"])
 
-
     def __getitem__(self, index):
         wav = self.wav[index].astype('float32')
         wav = torch.from_numpy(wav)
-        #mean, std, var = torch.mean(wav), torch.std(wav), torch.var(wav)
-        #wav = (wav - mean) / std
         return wav, wav
 
     def __len__(self):
@@ -147,19 +136,6 @@ def get_dataloaders(config, train_val_set):
         val_len = int(config['val_split'] * len(train_val_set))
         train_len = len(train_val_set) - val_len
         train_set, val_set = torch.utils.data.random_split(train_val_set, [train_len, val_len])
-
-        print(train_set, len(train_set))
-        print(val_set, len(val_set))
-
-        #it = iter(train_set)
-        #first = next(it)
-        #print(first.shape)
-        #second = next(it)
-        #print(second.shape)
-        #sys.exit(-1)
-
-        print(train_set)
-
 
         train_loader = torch.utils.data.DataLoader(train_set,
                                                   batch_size=config['batch_size'],
@@ -257,21 +233,6 @@ class AutoEncoder(torch.nn.Module):
         x = self.out(x)        # [input dims]
 
         return x
-
-def lr_schedule(optimizer, epoch):
-    lrate = 0.001
-    if epoch >=0 and epoch <=20:
-        for opt in optimizer.param_groups:
-            opt['lr'] = lrate
-    elif epoch >20 and epoch <=30:
-        for opt in optimizer.param_groups:
-            opt['lr'] = lrate/2
-            lrate = lrate/2
-    else:
-        for opt in optimizer.param_groups:
-            opt['lr'] = lrate / 4
-            lrate = lrate / 4
-    return lrate
 
 class AverageMeter(object):
 
@@ -392,57 +353,38 @@ def run_model(model, image, target, criterion, device):
 
 def evaluate(model, criterion, data_loader, device, neval_batches = None):
   model.eval()
-  avgacc = AverageMeter('6.2f')
   avgloss = AverageMeter('2.5f')
   step = 0
-  #with torch.no_grad() and tqdm(total=len(data_loader), unit="batch") as tepoch:
   with torch.no_grad():
-    #tepoch.set_description(f"Testing phase: ")
     for input, target in data_loader:
       step += 1
-      #tepoch.update(1)
       target = target.type(torch.long)
       input, target = input.to(device), target.to(device)
       output, loss = run_model(model, input, target, criterion, device)
-      #acc_val = accuracy(output, target, topk=(1,))
-      #avgacc.update(acc_val[0], input.size(0))
       avgloss.update(loss, input.size(0))
-      #tepoch.set_postfix({'loss': avgloss, 'acc': avgacc})
       if neval_batches is not None and step >= neval_batches:
-        return avgloss, avgacc
-  return avgloss, avgacc
+        return avgloss
+  return avgloss
 
 
 def train_one_epoch(epoch, model, criterion, optimizer, train, val, device):
   model.train()
-  avgacc = AverageMeter('6.2f')
   avgloss = AverageMeter('2.5f')
   step = 0
   with tqdm(total=len(train), unit="batch") as tepoch:
     tepoch.set_description(f"Epoch {epoch+1}")
     for input, target in train:
-      #print(type(input), len(input), input.size(), input)
-      #print(type(target), len(target), target.size(), target)
-      #sys.exit(-1)
       step += 1
       tepoch.update(1)
-      #target = target.type(torch.long)
       input, target = input.to(device), target.to(device)
       output, loss = run_model(model, input, target, criterion, device)
-      #print(type(output), len(output), output.size(), output)
-      #print(type(target), len(target), target.size(), target)
-      #print(type(loss), loss.item(), loss)
-      #sys.exit(-1)
-      #lrate = lr_schedule(optimizer, epoch)
       optimizer.zero_grad()
       loss.backward()
       optimizer.step()
-      #acc_val = accuracy(output, target, topk=(1,))
-      #avgacc.update(acc_val[0], input.size(0))
       avgloss.update(loss, input.size(0))
       if step % 100 == 99:
           tepoch.set_postfix({'loss': avgloss})
-    val_loss, _ = evaluate(model, criterion, val, device)
+    val_loss = evaluate(model, criterion, val, device)
     final_metrics = {
             'loss': avgloss.get(),
             'val_loss': val_loss.get(),
