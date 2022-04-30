@@ -11,7 +11,7 @@ from tqdm import tqdm
 from PIL import Image
 import random
 import sys
-#torch.manual_seed(23)
+torch.manual_seed(23)
 
 class Coco(torch.utils.data.Dataset):
     def __init__(self, image_path):
@@ -42,7 +42,6 @@ class Coco(torch.utils.data.Dataset):
     def __getitem__(self, index):
         img = Image.open(self.set[index])
         flag = self.label[index]
-
 
         # Defining the same data augmentation steps of the TinyML paper for training
         augmentation = transforms.Compose([
