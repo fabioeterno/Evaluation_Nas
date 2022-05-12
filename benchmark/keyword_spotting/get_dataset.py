@@ -385,7 +385,7 @@ def get_dataloaders(config, train_set, val_set, test_set):
       test_loader = torch.utils.data.DataLoader(test_set,
                                                 batch_size=config['batch_size'],
                                                 shuffle=False,
-                                                num_workers=config['batch_size'])
+                                                num_workers=config['num_workers'])
       return train_loader, val_loader, test_loader
 
 if __name__ == '__main__':

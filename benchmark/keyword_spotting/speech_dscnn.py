@@ -15,15 +15,6 @@ import os
 from tqdm import tqdm
 import sys
 
-
-import matplotlib.pyplot as plt
-import numpy as np
-
-from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Input, Dense, Activation, Flatten, BatchNormalization, Dropout, Reshape
-from tensorflow.keras.layers import Conv2D, DepthwiseConv2D, AveragePooling2D, GlobalAveragePooling2D
-from tensorflow.keras.regularizers import l2
-
 def prepare_model_settings(label_count, args):
   """Calculates common settings needed for all models.
   Args:
@@ -67,19 +58,6 @@ def prepare_model_settings(label_count, args):
     'background_volume_range_': 0.1
   }
 
-class ConvBlock(torch.nn.Module):
-    def __init__(self, in_channels, out_channels, kernel_size=3, stride=2, padding=1, groups=1):
-      super().__init__()
-      self.conv1 = nn.Conv2d(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding,
-                             bias=False, groups=groups)
-      nn.init.kaiming_normal_(self.conv1.weight)
-      self.bn = nn.BatchNorm2d(out_channels)
-      self.relu = nn.ReLU()
-
-    def forward(self, input):
-      x = self.conv1(input)
-      return self.relu(self.bn(x))
-
 # Definition of DSCnn architecture
 class DSCnn(torch.nn.Module):
     def __init__(self, args):
@@ -96,7 +74,6 @@ class DSCnn(torch.nn.Module):
         # Model layers
 
         # Input pure conv2d
-
         self.inputlayer = nn.Conv2d(in_channels=1, out_channels=64,  kernel_size=(10,4), stride=(2,2), padding=(5,1))
         self.bn = nn.BatchNorm2d(64, momentum=0.99)
         self.relu = nn.ReLU()
@@ -139,25 +116,16 @@ class DSCnn(torch.nn.Module):
         self.bn42 = nn.BatchNorm2d(64, momentum=0.99)
         self.relu42 = nn.ReLU()
 
-
-        # Reduce size and apply final softmax
         self.dropout2 = nn.Dropout(p=0.4)
-
         self.avgpool = torch.nn.AvgPool2d((25,5))
-
         self.out = nn.Linear(64, 12)
 
 
     def forward(self, input):
 
-        # Input tensor shape                         # [49, 10,  1]
-        #print("input: ", input.size())
-        #x = F.pad(input, (1, 1, 5, 5))  # [left, right, top, bot]
-        #print("input: ", input.size())
         # Input pure conv2d
-        x = self.inputlayer(input)                   # [25,  5, 64]
+        x = self.inputlayer(input)
         x = self.dropout1(self.relu(self.bn(x)))
-        #print("first output: ", x.size())
 
         # First layer of separable depthwise conv2d
         x = self.depthwise1(x)
@@ -165,7 +133,6 @@ class DSCnn(torch.nn.Module):
         x = self.relu11(self.bn11(x))
         x = self.conv1(x)
         x = self.relu12(self.bn12(x))
-        #print("first depth sep: ", x.size())
 
         # Second layer of separable depthwise conv2d
         x = self.depthwise2(x)
@@ -173,7 +140,6 @@ class DSCnn(torch.nn.Module):
         x = self.relu21(self.bn21(x))
         x = self.conv2(x)
         x = self.relu22(self.bn22(x))
-        #print("second depth sep: ", x.size())
 
         # Third layer of separable depthwise conv2d
         x = self.depthwise3(x)
@@ -181,7 +147,6 @@ class DSCnn(torch.nn.Module):
         x = self.relu31(self.bn31(x))
         x = self.conv3(x)
         x = self.relu32(self.bn32(x))
-        #print("third depth sep: ", x.size())
 
         # Fourth layer of separable depthwise conv2d
         x = self.depthwise4(x)
@@ -189,186 +154,14 @@ class DSCnn(torch.nn.Module):
         x = self.relu41(self.bn41(x))
         x = self.conv4(x)
         x = self.relu42(self.bn42(x))
-        #print("fourth depth sep: ", x.size())
 
-        # Reduce size and apply final softmax
         x = self.dropout2(x)
-        #print("dropout: ", x.size())
         x = self.avgpool(x)
-        #print("avgpool: ", x.size())
         x = torch.squeeze(x)
-        #print("squeeze: ", x.size())
         x = self.out(x)
-        #print("out: ", x.size())
-        #sys.exit(1)
+
         return x
 
-
-def get_model(args):
-  model_name = args.model_architecture
-
-  label_count=12
-  model_settings = prepare_model_settings(label_count, args)
-
-  if model_name=="fc4":
-    model = tf.keras.models.Sequential([
-        tf.keras.layers.Flatten(input_shape=(model_settings['spectrogram_length'],
-                                             model_settings['dct_coefficient_count'])),
-        tf.keras.layers.Dense(256, activation='relu'),
-        tf.keras.layers.Dropout(0.2),
-        tf.keras.layers.BatchNormalization(),
-        tf.keras.layers.Dense(256, activation='relu'),
-        tf.keras.layers.Dropout(0.2),
-        tf.keras.layers.BatchNormalization(),
-        tf.keras.layers.Dense(256, activation='relu'),
-        tf.keras.layers.Dropout(0.2),
-        tf.keras.layers.BatchNormalization(),
-        tf.keras.layers.Dense(model_settings['label_count'], activation="softmax")
-    ])
-
-  elif model_name == 'ds_cnn':
-    print("DS CNN model invoked")
-    input_shape = [model_settings['spectrogram_length'], model_settings['dct_coefficient_count'],1]
-    filters = 64
-    weight_decay = 1e-4
-    regularizer = l2(weight_decay)
-    final_pool_size = (int(input_shape[0]/2), int(input_shape[1]/2))
-    
-    # Model layers
-    # Input pure conv2d
-    inputs = Input(shape=input_shape)
-    x = Conv2D(filters, (10,4), strides=(2,2), padding='same', kernel_regularizer=regularizer)(inputs)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = Dropout(rate=0.2)(x)
-
-    # First layer of separable depthwise conv2d
-    # Separable consists of depthwise conv2d followed by conv2d with 1x1 kernels
-    x = DepthwiseConv2D(depth_multiplier=1, kernel_size=(3,3), padding='same', kernel_regularizer=regularizer)(x)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = Conv2D(filters, (1,1), padding='same', kernel_regularizer=regularizer)(x)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-
-    # Second layer of separable depthwise conv2d
-    x = DepthwiseConv2D(depth_multiplier=1, kernel_size=(3,3), padding='same', kernel_regularizer=regularizer)(x)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = Conv2D(filters, (1,1), padding='same', kernel_regularizer=regularizer)(x)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-
-    # Third layer of separable depthwise conv2d
-    x = DepthwiseConv2D(depth_multiplier=1, kernel_size=(3,3), padding='same', kernel_regularizer=regularizer)(x)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = Conv2D(filters, (1,1), padding='same', kernel_regularizer=regularizer)(x)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-
-    # Fourth layer of separable depthwise conv2d
-    x = DepthwiseConv2D(depth_multiplier=1, kernel_size=(3,3), padding='same', kernel_regularizer=regularizer)(x)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = Conv2D(filters, (1,1), padding='same', kernel_regularizer=regularizer)(x)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-
-    # Reduce size and apply final softmax
-    x = Dropout(rate=0.4)(x)
-
-    x = AveragePooling2D(pool_size=final_pool_size)(x)
-    x = Flatten()(x)
-    outputs = Dense(model_settings['label_count'], activation='softmax')(x)
-
-    # Instantiate model.
-    model = Model(inputs=inputs, outputs=outputs)
-
-  elif model_name == 'td_cnn':
-    print("TD CNN model invoked")
-    input_shape = [model_settings['spectrogram_length'], model_settings['dct_coefficient_count'],1]
-    print(f"Input shape = {input_shape}")
-    filters = 64
-    weight_decay = 1e-4
-    regularizer = l2(weight_decay)
-
-    # Model layers
-    # Input time-domain conv
-    inputs = Input(shape=input_shape)
-    x = Conv2D(filters, (512,1), strides=(384, 1),
-               padding='valid', kernel_regularizer=regularizer)(inputs)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = Dropout(rate=0.2)(x)
-    x = Reshape((41,64,1))(x)
-    
-    # True conv 
-    x = Conv2D(filters, (10,4), strides=(2,2), padding='same', kernel_regularizer=regularizer)(x)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = Dropout(rate=0.2)(x)
-
-    # First layer of separable depthwise conv2d
-    # Separable consists of depthwise conv2d followed by conv2d with 1x1 kernels
-    # First layer of separable depthwise conv2d
-    # Separable consists of depthwise conv2d followed by conv2d with 1x1 kernels
-    x = DepthwiseConv2D(depth_multiplier=1, kernel_size=(3,3), padding='same', kernel_regularizer=regularizer)(x)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = Conv2D(filters, (1,1), padding='same', kernel_regularizer=regularizer)(x)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-
-    # Second layer of separable depthwise conv2d
-    x = DepthwiseConv2D(depth_multiplier=1, kernel_size=(3,3), padding='same', kernel_regularizer=regularizer)(x)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = Conv2D(filters, (1,1), padding='same', kernel_regularizer=regularizer)(x)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-
-    # Third layer of separable depthwise conv2d
-    x = DepthwiseConv2D(depth_multiplier=1, kernel_size=(3,3), padding='same', kernel_regularizer=regularizer)(x)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = Conv2D(filters, (1,1), padding='same', kernel_regularizer=regularizer)(x)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-
-    # Fourth layer of separable depthwise conv2d
-    x = DepthwiseConv2D(depth_multiplier=1, kernel_size=(3,3), padding='same', kernel_regularizer=regularizer)(x)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-    x = Conv2D(filters, (1,1), padding='same', kernel_regularizer=regularizer)(x)
-    x = BatchNormalization()(x)
-    x = Activation('relu')(x)
-
-    # Reduce size and apply final softmax
-    x = Dropout(rate=0.4)(x)
-
-    # x = AveragePooling2D(pool_size=(25,5))(x)
-    x = GlobalAveragePooling2D()(x)
-
-    x = Flatten()(x)
-    outputs = Dense(model_settings['label_count'], activation='softmax')(x)
-
-    # Instantiate model.
-    model = Model(inputs=inputs, outputs=outputs)
-
-  else:
-    raise ValueError("Model name {:} not supported".format(model_name))
-
-  model.compile(
-    #optimizer=keras.optimizers.RMSprop(learning_rate=args.learning_rate),  # Optimizer
-    optimizer=keras.optimizers.Adam(learning_rate=args.learning_rate),  # Optimizer
-    # Loss function to minimize
-    loss=keras.losses.SparseCategoricalCrossentropy(),
-    # List of metrics to monitor
-    metrics=[keras.metrics.SparseCategoricalAccuracy()],
-  )
-
-  return model
 
 def lr_schedule(optimizer, epoch):
     if epoch >=0 and epoch <=12:
@@ -385,8 +178,8 @@ def lr_schedule(optimizer, epoch):
             lrate = 2e-05
     return lrate
 
-class AverageMeter(object):
 
+class AverageMeter(object):
     """Computes and stores the average and current value"""
     def __init__(self, fmt='f', name='meter'):
         self.name = name
@@ -416,26 +209,18 @@ class AverageMeter(object):
 def accuracy(output, target, topk=(1,)):
   """Computes the accuracy over the k top predictions for the specified values of k"""
   with torch.no_grad():
-    #print(output.argmax(dim=-1))
-    #sys.exit(-1)
     maxk = max(topk)
     batch_size = target.size(0)
 
     _, pred = output.topk(maxk, 1, True, True)
-    #print(pred)
     pred = pred.t()
-    #print("predictions: ", pred)
     correct = pred.eq(target.view(1, -1).expand_as(pred))
-    #print(correct)
 
     res = []
     for k in topk:
       correct_k = correct[:k].reshape(-1).float().sum(0, keepdim=True)
-      #print("correct k: ", correct_k)
       res.append(correct_k.mul_(100.0 / batch_size))
-    #print("result: ", res)
 
-  #sys.exit(-1)
   return res
 
 
@@ -516,21 +301,13 @@ def evaluate(model, criterion, data_loader, device):
   avgacc = AverageMeter('6.2f')
   avgloss = AverageMeter('2.5f')
   step = 0
-  #with torch.no_grad() and tqdm(total=len(data_loader), unit="batch") as tepoch:
-  #  tepoch.set_description(f"Testing phase: ")
   for audio, target in data_loader:
       step += 1
-  #    tepoch.update(1)
-      #target = target.type(torch.long)
       audio, target = audio.to(device), target.to(device)
       output, loss = run_model(model, audio, target, criterion, device)
       acc_val = accuracy(output, target, topk=(1,))
-      #print(output, type(output))
-      #print(target, type(target))
-      #sys.exit(1)
       avgacc.update(acc_val[0], audio.size(0))
       avgloss.update(loss, audio.size(0))
-      #tepoch.set_postfix({'loss': avgloss, 'acc': avgacc})
   return avgloss, avgacc
 
 
@@ -544,11 +321,8 @@ def train_one_epoch(epoch, model, criterion, optimizer, train, val, device):
     for audio, target in train:
       step += 1
       tepoch.update(1)
-      #target = target.type(torch.long)
       audio, target = audio.to(device), target.to(device)
       output, loss = run_model(model, audio, target, criterion, device)
-      #print(output, type(output))
-      #print(target, type(target))
       lrate = lr_schedule(optimizer, epoch)
       optimizer.zero_grad()
       loss.backward()
@@ -565,7 +339,6 @@ def train_one_epoch(epoch, model, criterion, optimizer, train, val, device):
             'val_loss': val_loss.get(),
             'val_acc': val_acc.get()
             }
-
     tepoch.set_postfix(final_metrics)
     tepoch.close()
   return final_metrics
