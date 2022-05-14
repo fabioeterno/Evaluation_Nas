@@ -40,13 +40,13 @@ Flags, unparsed = kws_util.parse_command()
 print('We will download data to {:}'.format(Flags.data_dir))
 print('We will train for {:} epochs'.format(Flags.epochs))
 
-ds_train, ds_test, ds_val = kws_data.get_training_data(Flags)
+ds_train, ds_test, ds_val, model_settings = kws_data.get_training_data(Flags)
 
 #print(ds_train, len(ds_train))
 #print(ds_val, len(ds_val))
 #print(ds_test, len(ds_test))
 
-train_set, val_set, test_set = kws_data.get_benchmark(ds_train, ds_val, ds_test)
+train_set, val_set, test_set = kws_data.get_benchmark(ds_train, ds_val, ds_test, model_settings)
 
 #print(train_set, len(train_set))
 #print(val_set, len(val_set))
