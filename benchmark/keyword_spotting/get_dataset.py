@@ -370,35 +370,35 @@ def preprocess_pytorch(tmp_audio, tmp_label, model_settings):
 
       #sys.exit(-1)
 
-      librosa_stft = librosa.stft(a.numpy(),
-                                  n_fft=512,
-                                  win_length=model_settings['window_size_samples'],
-                                  hop_length=model_settings['window_stride_samples'],
-                                  center=False,
-                                  window='hann'
-                                 )
+      #librosa_stft = librosa.stft(a.numpy(),
+      #                            n_fft=512,
+      #                            win_length=model_settings['window_size_samples'],
+      #                            hop_length=model_settings['window_stride_samples'],
+      #                            center=False,
+      #                            window='hann'
+      #                           )
 
 
 
 
-      librosa_stft = np.moveaxis(librosa_stft, 0, -1)
+      #librosa_stft = np.moveaxis(librosa_stft, 0, -1)
       #print("input torch function librosa: ", librosa_stft, librosa_stft.shape)
       #print("")
-      spectrogram = np.abs(librosa_stft)
+      #spectrogram = np.abs(librosa_stft)
       #print("librosa spectrogram: ", spectrogram, spectrogram.shape)
       #print("")
 
-      lb_l2m = librosa.filters.mel(sr=16000, n_fft=512, n_mels=40, fmin=20, fmax=4000, htk=True, norm=None)
-      lb_l2m = np.moveaxis(lb_l2m, 0, -1)
+      #lb_l2m = librosa.filters.mel(sr=16000, n_fft=512, n_mels=40, fmin=20, fmax=4000, htk=True, norm=None)
+      #lb_l2m = np.moveaxis(lb_l2m, 0, -1)
       #print("librosa mel filters: ", lb_l2m, lb_l2m.shape)
       #print("")
 
-      lb_melgramm = np.dot(spectrogram, lb_l2m)
+      #lb_melgramm = np.dot(spectrogram, lb_l2m)
       #print("librosa  mel spectrogram: ", lb_melgramm, lb_melgramm.shape)
       #print("")
       #print('melgram differences:', np.max(np.abs(mel_spectro - lb_melgramm)))
       #print('differences:', np.abs(mel_spectro - lb_melgramm))
-      log_mel_spectrogram = np.log(lb_melgramm + 1e-6)
+      #log_mel_spectrogram = np.log(lb_melgramm + 1e-6)
       #print("librosa log mel spectrogram: ", log_mel_spectrogram, log_mel_spectrogram.shape)
       #print('log melgram differences:', np.abs(log_mel_spectro - log_mel_spectrogram))
       #print("")
@@ -510,9 +510,9 @@ def preprocess_pytorch(tmp_audio, tmp_label, model_settings):
       #print(librosa_mfccs.shape)
       #sys.exit(1)
 
-      a = mfcc_torch_log
+      #a = mfcc_torch_log
 
-      tmp_audio_post.append(a)
+      tmp_audio_post.append(mfcc_torch_log)
 
   return tmp_audio_post, tmp_label
 
