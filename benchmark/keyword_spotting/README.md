@@ -1,11 +1,11 @@
 # MLPerf Tiny keyword spotting reference model
 
-This is the MLPerf Tiny anomaly detection reference model.
+This is the MLPerf Tiny keyword spotting reference model.
 
 An autoencoder model is trained on the ToyCar dataset.
 
-- Model: autoencoder
-- Dataset: ToyCar
+- Model: Depthwise Separable CNN
+- Dataset: Speech Commands
 
 ## Quick start
 
