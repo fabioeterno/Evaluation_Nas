@@ -1,0 +1,23 @@
+# MLPerf Tiny keyword spotting reference model
+
+This is the MLPerf Tiny anomaly detection reference model.
+
+An autoencoder model is trained on the ToyCar dataset.
+
+- Model: autoencoder
+- Dataset: ToyCar
+
+## Quick start
+
+Run the following commands to go through the whole training and validation process
+
+``` Bash
+
+# In order to correctly run the code install the needed libraries with the command
+pip install requirements.txt
+```
+``` Bash
+
+# Train and test the model
+./keyword_spotting_dscnn.sh
+```
