@@ -9,7 +9,16 @@ An autoencoder model is trained on the ToyCar dataset.
 
 ## Quick start
 
-Run the following commands to go through the whole training and validation process
+To run the code and replicate the results it is suggested to create a new python virtual environment and install the required libraries:
+``` Bash
+
+# Python virtual environment creation
+python3 -m venv <environment-name>
+# Libraries required installation
+pip install requirements.txt
+```
+
+Run the following commands to go through the whole training and validation process:
 
 ``` Bash
 
