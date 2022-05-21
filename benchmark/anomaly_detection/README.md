@@ -10,11 +10,14 @@ This is the MLPerf Tiny anomaly detection reference model.
 To run the code and replicate the results it is suggested to create a new python virtual environment and install the required libraries:
 ``` Bash
 
-# Python virtual environment creation
+# Create a new python virtual environment 
 python3 -m venv <environment-name>
-# Installation of the required libraries
+# Activate the virtual environment 
+source <environment-name>/bin/activate
+# Install the required libraries
 python3 -m pip install --upgrade pip
 pip install -r requirements.txt
+pip freeze | grep -v -f requirements.txt - | xargs pip uninstall -y
 ```
 
 Run the following commands to go through the whole training and validation process:
