@@ -27,7 +27,7 @@ config = {
   "val_split": 0.1,
 
   # training
-  "n_epochs": 100,
+  "n_epochs": 1,
   "lr": 0.001,
   "max_fpr" : 0.1
 }

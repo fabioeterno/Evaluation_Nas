@@ -14,9 +14,11 @@ To run the code and replicate the results it is suggested to create a new python
 python3 -m venv <environment-name>
 # Activate the virtual environment 
 source <environment-name>/bin/activate
-# Install the required libraries
+# Upgrade pip to the latest version
 python3 -m pip install --upgrade pip
+# Install the required libraries
 pip install -r requirements.txt
+# Uninstall all the libraries not present in the requirements file
 pip freeze | grep -v -f requirements.txt - | xargs pip uninstall -y
 ```
 
