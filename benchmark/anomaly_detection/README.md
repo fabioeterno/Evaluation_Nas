@@ -2,8 +2,6 @@
 
 This is the MLPerf Tiny anomaly detection reference model.
 
-An autoencoder model is trained on the ToyCar dataset.
-
 - Model: autoencoder
 - Dataset: ToyCar
 
@@ -14,8 +12,9 @@ To run the code and replicate the results it is suggested to create a new python
 
 # Python virtual environment creation
 python3 -m venv <environment-name>
-# Libraries required installation
-pip install requirements.txt
+# Installation of the required libraries
+python3 -m pip install --upgrade pip
+pip install -r requirements.txt
 ```
 
 Run the following commands to go through the whole training and validation process:
